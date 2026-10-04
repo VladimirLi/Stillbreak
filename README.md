@@ -75,9 +75,70 @@ Requires macOS 14 (Sonoma) or newer on Apple Silicon or Intel.
 
 The app lives in the menu bar only and has no Dock icon.
 
+To skip the first-launch warning, use the
+[install script](#install-with-the-script-no-first-launch-warning) instead.
+
 The name (app bundle, DMG and release file names) is set in one place,
 `APP_NAME` in `scripts/release-config.sh`; the install steps above only spell it
 out in the `APP_NAME=` line of the Terminal alternative.
+
+### Install with the script (no first-launch warning)
+
+One line in Terminal downloads the latest release, checks it and installs it:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/VladimirLi/Stillbreak/main/install.sh | sh
+```
+
+Prefer to read it first? Download it, read it, then run it:
+
+```sh
+curl -fsSLO https://raw.githubusercontent.com/VladimirLi/Stillbreak/main/install.sh
+less install.sh
+sh install.sh
+```
+
+Pass options after `sh -s --` when piping, or directly when running the file:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/VladimirLi/Stillbreak/main/install.sh | sh -s -- --version v1.0.0
+```
+
+| Option | Effect |
+| --- | --- |
+| `--version vX.Y.Z` | Install that release instead of the latest. |
+| `--from-source` | Clone the repository and build it on your Mac (needs Swift 6.3+; see [Build from source](#build-from-source)). Use it when no release is published yet. With `--version`, it builds that tag. |
+| `--dir DIR` | Install into `DIR` instead of `/Applications`. |
+| `--no-open` | Do not launch the app afterwards. |
+| `--uninstall` | Remove the app and leave your data. Add `--purge` to delete `~/Library/Application Support/Stillbreak` too. |
+
+The script runs only on macOS 14 or newer and never uses `sudo`. It:
+
+1. Finds the latest GitHub release (or the one you name) and downloads
+   `Stillbreak-<version>.zip` and `SHA256SUMS.txt` into a temporary folder.
+2. Checks the zip's SHA-256 against `SHA256SUMS.txt` and stops on a mismatch.
+3. Unpacks it, runs `codesign --verify --deep --strict`, quits a running
+   Stillbreak the normal way (it never force-kills), and replaces
+   `/Applications/Stillbreak.app` (`~/Applications` if `/Applications` is not
+   writable for you).
+4. Clears the quarantine flag as a safeguard and opens the app.
+
+It writes only to its temporary folder (deleted when it finishes) and the
+install folder, and sends no telemetry. The network is used for GitHub release
+downloads, plus `git clone` with `--from-source` (Swift Package Manager keeps its
+own caches under `~/Library/Caches` and `~/.swiftpm` while building). Your data in
+`~/Library/Application Support/Stillbreak` is never touched unless you pass
+`--uninstall --purge`.
+
+macOS shows the "could not verify" warning only for files that carry the
+quarantine flag, which browsers add to downloads and `curl` does not. The
+release is still only ad-hoc signed and not notarized; the script just avoids
+the warning. If you would rather not run a script, use the DMG above.
+
+The checksum protects against a corrupted or incomplete download. It does not
+protect against a compromised GitHub account or release, because the checksum
+file comes from the same place as the zip. Review the script and the release
+before running it if that matters to you.
 
 ### Upgrading from ActiveBreak
 
