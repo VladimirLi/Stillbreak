@@ -85,9 +85,13 @@ before swapping it in and moves any existing `/Applications/Stillbreak.app` to
 the Trash instead of deleting it. It refuses to start when anything already at that
 path is not Stillbreak, including an empty folder. It will not overwrite or nest
 inside another app, file or non-empty folder that appears there mid-install: it
-stops, and if it cannot put the previous Stillbreak back it prints that copy's
-Trash path. Only an empty folder that appears at that moment (after the up-front
-checks) is replaced, and nothing is lost. These checks are
+stops and leaves it alone. On an upgrade it puts the previous Stillbreak back only if
+the destination is free; otherwise it prints that copy's Trash path (on a fresh install,
+or if the collision is caught before the old app is moved, nothing was moved and no
+path is printed). An empty folder is replaced whenever `rename(2)` meets one: at the
+destination only if it appears after the up-front checks (one already there is
+rejected), and at the generated Trash name even if it was there before; nothing is
+lost. These checks are
 best-effort, not a lock against other processes changing `/Applications`. Use the full `VladimirLi/tap/stillbreak` name: Homebrew 7 refuses
 the short name from an untrusted tap. To upgrade, run
 `brew reinstall VladimirLi/tap/stillbreak` and then `stillbreak-app install`. To
