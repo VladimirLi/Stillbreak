@@ -211,6 +211,13 @@
           <pre><code>xattr -dr com.apple.quarantine /Applications/Stillbreak.app</code></pre>
         </details>
 
+        <details>
+          <summary>Install with one Terminal command</summary>
+          <p>This downloads the installer to a temporary file (nothing is left in your current folder), then downloads the latest release, checks its SHA-256 checksum and installs it. Files fetched this way don’t get the quarantine flag, so the first-launch warning normally doesn’t appear.</p>
+          <pre><code>(f=$(mktemp) &amp;&amp; trap 'rm -f "$f"' EXIT &amp;&amp; curl -fsSL https://raw.githubusercontent.com/VladimirLi/Stillbreak/main/install.sh -o "$f" &amp;&amp; grep -qx 'main "$@" --script-complete' "$f" &amp;&amp; sh "$f")</code></pre>
+          <p>You can <a href="https://github.com/VladimirLi/Stillbreak/blob/main/install.sh">read the script</a> first. Options such as <code>--from-source</code> and <code>--uninstall</code> are described in the <a href="https://github.com/VladimirLi/Stillbreak#install-with-the-script-avoids-the-first-launch-warning">README</a>.</p>
+        </details>
+
         <div class="why measure">
           <h3>Why the warning appears</h3>
           <p class="body-lg">Stillbreak is free and open source, and releases are only ad-hoc signed, not signed with an Apple Developer ID or notarized. Notarization needs a paid Apple Developer Program membership, which the project doesn’t have yet. The warning means Apple hasn’t scanned this build, not that it’s harmful. You can <a href="https://github.com/VladimirLi/Stillbreak">read the source</a>, build it yourself, or compare your download with the SHA-256 checksums in the release notes (<code>shasum -a 256 &lt;file&gt;</code>).</p>

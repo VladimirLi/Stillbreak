@@ -115,9 +115,92 @@ Login Items & Extensions for a leftover entry. See the
 
 The app lives in the menu bar only and has no Dock icon.
 
+To avoid the first-launch warning, use the
+[install script](#install-with-the-script-avoids-the-first-launch-warning) instead.
+
 The name (app bundle, DMG and release file names) is set in one place,
 `APP_NAME` in `scripts/release-config.sh`; the install steps above only spell it
 out in the `APP_NAME=` line of the Terminal alternative.
+
+### Install with the script (avoids the first-launch warning)
+
+One line in Terminal downloads the script to a temporary file, checks that the
+download is complete, and runs it:
+
+```sh
+(f=$(mktemp) && trap 'rm -f "$f"' EXIT && curl -fsSL https://raw.githubusercontent.com/VladimirLi/Stillbreak/main/install.sh -o "$f" && grep -qx 'main "$@" --script-complete' "$f" && sh "$f")
+```
+
+The line stops with a non-zero exit status if the download fails, is empty or
+is cut short (the script's last line is its end marker). The temporary file is
+deleted when the line ends, and nothing is written to your current folder, so
+an `install.sh` you already have there is never touched. Prefer to read the
+script before running it? This line downloads and checks it the same way, shows
+it in `less` (press `q` to leave), and runs it only if you answer `y`:
+
+```sh
+(f=$(mktemp) && trap 'rm -f "$f"' EXIT && curl -fsSL https://raw.githubusercontent.com/VladimirLi/Stillbreak/main/install.sh -o "$f" && grep -qx 'main "$@" --script-complete' "$f" && less "$f" && printf 'Run it? [y/N] ' && read -r a && [ "$a" = y ] && sh "$f")
+```
+
+Options go at the end of the line, after `sh "$f"`:
+
+```sh
+(f=$(mktemp) && trap 'rm -f "$f"' EXIT && curl -fsSL https://raw.githubusercontent.com/VladimirLi/Stillbreak/main/install.sh -o "$f" && grep -qx 'main "$@" --script-complete' "$f" && sh "$f" --version v1.0.0)
+```
+
+Piping straight into the shell (`curl ... | sh`) also works, but a shell reading
+a pipe reports only its own exit status, so a failed or empty download exits 0
+without installing anything. Use the lines above if a script or CI job needs to
+detect failure.
+
+| Option | Effect |
+| --- | --- |
+| `--version vX.Y.Z` | Install that release instead of the latest. |
+| `--from-source` | Clone the repository and build it on your Mac (needs Swift 6.3+; see [Build from source](#build-from-source)). Use it when no release is published yet. With `--version`, it builds that tag. |
+| `--dir DIR` | Install into `DIR` instead of `/Applications`. |
+| `--no-open` | Do not launch the newly installed app afterwards. |
+| `--uninstall` | Remove the app and leave your data. Add `--purge` to delete `~/Library/Application Support/Stillbreak` too. |
+
+The script runs only on macOS 14 or newer and never uses `sudo`. It:
+
+1. Finds the latest GitHub release (or the one you name) and downloads
+   `Stillbreak-<version>.zip` and `SHA256SUMS.txt` into a temporary folder.
+2. Checks the zip's SHA-256 against `SHA256SUMS.txt` and stops on a mismatch.
+3. Unpacks it, runs `codesign --verify --deep --strict`, quits a running
+   Stillbreak the normal way (it never force-kills), and replaces
+   `/Applications/Stillbreak.app` (`~/Applications` if `/Applications` is not
+   writable for you).
+4. Clears the quarantine flag as a safeguard and opens the app.
+
+The script itself writes only to its temporary folder (deleted when it
+finishes) and the install folder, and sends no telemetry. The one exception is
+`--from-source`: Swift Package Manager keeps its own caches under
+`~/Library/Caches` and `~/.swiftpm` while building. The network is used for
+GitHub release downloads, plus `git clone` with `--from-source`. The script
+never deletes `~/Library/Application Support/Stillbreak` unless you pass
+`--uninstall --purge`.
+
+Opening the app is a separate step, and the app itself writes there: on launch
+it saves its state file, and on a first launch it may copy data from
+`ActiveBreak` (see [Upgrading from ActiveBreak](#upgrading-from-activebreak)).
+`--no-open` only skips launching the newly installed app. If Stillbreak is
+already running, the script still quits it to replace it, and a running app
+can save its state at any time, so the state file may change even with
+`--no-open`. On a fresh install, with the app not running, nothing under
+`~/Library/Application Support` is created or changed until you open the app
+yourself.
+
+macOS shows the "could not verify" warning only for files that carry the
+quarantine flag, which browsers add to downloads and `curl` does not, and the
+script also removes the flag. If removing it fails, the script says so and the
+first launch may show the warning; use the steps for your macOS version above.
+The release is still only ad-hoc signed and not notarized; the script just
+avoids the warning in the normal case. If you would rather not run a script, use the DMG above.
+
+The checksum protects against a corrupted or incomplete download. It does not
+protect against a compromised GitHub account or release, because the checksum
+file comes from the same place as the zip. Review the script and the release
+before running it if that matters to you.
 
 ### Upgrading from ActiveBreak
 
