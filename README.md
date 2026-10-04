@@ -64,6 +64,32 @@ closure more than once cannot create a second history record.
 
 Requires macOS 14 (Sonoma) or newer on Apple Silicon or Intel.
 
+### Install with Homebrew (build from source)
+
+Homebrew builds Stillbreak on your Mac from the latest `main`. The build takes a
+few minutes and needs the Xcode or Command Line Tools with Swift 6.3+. Because
+the app is built locally, macOS does not quarantine it and the first-launch
+warning described below does not appear.
+
+```sh
+brew tap VladimirLi/tap
+brew install --HEAD VladimirLi/tap/stillbreak
+rm -rf /Applications/Stillbreak.app
+ditto "$(brew --prefix stillbreak)/Stillbreak.app" /Applications/Stillbreak.app
+```
+
+Homebrew cannot write to `/Applications`, so the last two commands copy the app
+there; open it from `/Applications`, because launch at login can fail from other
+locations. Use the full `VladimirLi/tap/stillbreak` name: Homebrew 7 refuses the
+short name from an untrusted tap. To upgrade, run
+`brew reinstall VladimirLi/tap/stillbreak` and repeat the two copy commands. To
+uninstall, quit Stillbreak, turn off Launch at login in Settings, delete
+`/Applications/Stillbreak.app`, run `brew uninstall VladimirLi/tap/stillbreak`
+and check System Settings > General > Login Items & Extensions for a leftover
+entry. See the [tap](https://github.com/VladimirLi/homebrew-tap) for details.
+
+### Install from the DMG
+
 1. Download the `.dmg` (named `<app name>-<version>.dmg`) from the
    [latest release](https://github.com/VladimirLi/Stillbreak/releases/latest).
    A `.zip` of the same app is attached too.
