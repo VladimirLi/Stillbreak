@@ -83,8 +83,9 @@ The formula builds the app into Homebrew's own folder and does not manage
 is running, then open it from `/Applications`. The helper verifies the copy
 before swapping it in and moves any existing `/Applications/Stillbreak.app` to
 the Trash instead of deleting it. It will not overwrite or nest inside another
-app at that path: if something else appears there mid-install it stops, and if
-it cannot put the previous Stillbreak back it prints that copy's Trash path. It
+app, file or non-empty folder at that path (an empty folder there is replaced):
+if something else appears there mid-install it stops, and if it cannot put the
+previous Stillbreak back it prints that copy's Trash path. It
 refuses to start when the existing app is not Stillbreak. These checks are
 best-effort, not a lock against other processes changing `/Applications`. Use the full `VladimirLi/tap/stillbreak` name: Homebrew 7 refuses
 the short name from an untrusted tap. To upgrade, run
