@@ -74,19 +74,33 @@ warning described below does not appear.
 ```sh
 brew tap VladimirLi/tap
 brew install --HEAD VladimirLi/tap/stillbreak
-rm -rf /Applications/Stillbreak.app
-ditto "$(brew --prefix stillbreak)/Stillbreak.app" /Applications/Stillbreak.app
+stillbreak-app install
 ```
 
-Homebrew cannot write to `/Applications`, so the last two commands copy the app
-there; open it from `/Applications`, because launch at login can fail from other
-locations. Use the full `VladimirLi/tap/stillbreak` name: Homebrew 7 refuses the
-short name from an untrusted tap. To upgrade, run
-`brew reinstall VladimirLi/tap/stillbreak` and repeat the two copy commands. To
-uninstall, quit Stillbreak, turn off Launch at login in Settings, delete
-`/Applications/Stillbreak.app`, run `brew uninstall VladimirLi/tap/stillbreak`
-and check System Settings > General > Login Items & Extensions for a leftover
-entry. See the [tap](https://github.com/VladimirLi/homebrew-tap) for details.
+The formula builds the app into Homebrew's own folder and does not manage
+`/Applications`; the `stillbreak-app` helper it installs copies the app there
+(launch at login can fail from other locations), so quit Stillbreak first if it
+is running, then open it from `/Applications`. The helper verifies the copy
+before swapping it in and moves any existing `/Applications/Stillbreak.app` to
+the Trash instead of deleting it. It refuses to start when anything already at that
+path is not Stillbreak, including an empty folder. It will not overwrite or nest
+inside another app, file or non-empty folder that appears there mid-install: it
+stops and leaves it alone. On an upgrade it puts the previous Stillbreak back only if
+the destination is free; otherwise it prints that copy's Trash path (on a fresh install,
+or if a collision at the app destination is caught before the old app is moved, nothing was moved and no
+previous-copy path is printed). If the move to the Trash itself fails, the old app stays in `/Applications`;
+the error names the Trash path it tried, but nothing was placed there. A successful upgrade also prints the previous copy's Trash path. An empty folder is replaced whenever `rename(2)` meets one: at the
+destination only if it appears after the up-front checks (one already there is
+rejected), and at the generated Trash name even if it was there before; nothing is
+lost. These checks are
+best-effort, not a lock against other processes changing `/Applications`. Use the full `VladimirLi/tap/stillbreak` name: Homebrew 7 refuses
+the short name from an untrusted tap. To upgrade, run
+`brew reinstall VladimirLi/tap/stillbreak` and then `stillbreak-app install`. To
+uninstall, quit Stillbreak, turn off Launch at login in Settings, run
+`stillbreak-app uninstall` (moves the app to the Trash), then
+`brew uninstall VladimirLi/tap/stillbreak` and check System Settings > General >
+Login Items & Extensions for a leftover entry. See the
+[tap](https://github.com/VladimirLi/homebrew-tap) for details.
 
 ### Install from the DMG
 
