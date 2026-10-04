@@ -47,16 +47,22 @@ Environment (for testing):
 
 No sudo, no telemetry. Only GitHub downloads (and git clone for --from-source)
 touch the network; only a temporary directory and the install directory are
-written to.
+written to (--from-source also uses the Swift package manager's own caches).
 EOF
 }
 
 cleanup() {
-    if [ -n "$OLD" ] && [ -n "$TARGET" ] && { [ -e "$OLD" ] || [ -L "$OLD" ]; } \
-        && [ ! -e "$TARGET" ] && [ ! -L "$TARGET" ]; then
-        mv "$OLD" "$TARGET" 2>/dev/null || true
+    keep_old=0
+    if [ -n "$OLD" ] && { [ -e "$OLD" ] || [ -L "$OLD" ]; }; then
+        if [ -n "$TARGET" ] && [ ! -e "$TARGET" ] && [ ! -L "$TARGET" ] \
+            && mv "$OLD" "$TARGET" 2>/dev/null; then
+            :
+        else
+            keep_old=1
+            printf '%s\n' "ERROR: could not restore the previous $APP_NAME.app. It is still at: $OLD" >&2
+        fi
     fi
-    [ -z "$OLDDIR" ] || rm -rf "$OLDDIR"
+    [ "$keep_old" = 1 ] || [ -z "$OLDDIR" ] || rm -rf "$OLDDIR"
     [ -z "$STAGE" ] || rm -rf "$STAGE"
     [ -z "$TMP" ] || rm -rf "$TMP"
 }
@@ -225,7 +231,7 @@ install_app() {
         mv "$TARGET" "$OLDDIR/$APP_NAME.app"
         OLD=$OLDDIR/$APP_NAME.app
     fi
-    mv "$STAGE/$APP_NAME.app" "$TARGET" || die "could not move the new app into place; the previous install was kept."
+    mv "$STAGE/$APP_NAME.app" "$TARGET" || die "could not move the new app into place."
     rm -rf "$OLDDIR" "$STAGE"
     OLD=
     OLDDIR=
