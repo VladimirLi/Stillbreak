@@ -95,13 +95,11 @@ The line stops with a non-zero exit status if the download fails, is empty or
 is cut short (the script's last line is its end marker). The temporary file is
 deleted when the line ends, and nothing is written to your current folder, so
 an `install.sh` you already have there is never touched. Prefer to read the
-script before running it? Download it, read it, then run it:
+script before running it? This line downloads and checks it the same way, shows
+it in `less` (press `q` to leave), and runs it only if you answer `y`:
 
 ```sh
-f=$(mktemp) && curl -fsSL https://raw.githubusercontent.com/VladimirLi/Stillbreak/main/install.sh -o "$f"
-less "$f"
-sh "$f"
-rm -f "$f"
+(f=$(mktemp) && trap 'rm -f "$f"' EXIT && curl -fsSL https://raw.githubusercontent.com/VladimirLi/Stillbreak/main/install.sh -o "$f" && grep -qx 'main "$@" --script-complete' "$f" && less "$f" && printf 'Run it? [y/N] ' && read -r a && [ "$a" = y ] && sh "$f")
 ```
 
 Options go at the end of the line, after `sh "$f"`:
