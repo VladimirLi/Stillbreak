@@ -14,6 +14,7 @@ VERSION_RE='^v?[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'
 
 TMP=
 STAGE=
+OLDDIR=
 OLD=
 TARGET=
 
@@ -51,13 +52,11 @@ EOF
 }
 
 cleanup() {
-    if [ -n "$OLD" ] && { [ -e "$OLD" ] || [ -L "$OLD" ]; }; then
-        if [ -n "$TARGET" ] && [ ! -e "$TARGET" ] && [ ! -L "$TARGET" ]; then
-            mv "$OLD" "$TARGET" 2>/dev/null || true
-        else
-            rm -rf "$OLD"
-        fi
+    if [ -n "$OLD" ] && [ -n "$TARGET" ] && { [ -e "$OLD" ] || [ -L "$OLD" ]; } \
+        && [ ! -e "$TARGET" ] && [ ! -L "$TARGET" ]; then
+        mv "$OLD" "$TARGET" 2>/dev/null || true
     fi
+    [ -z "$OLDDIR" ] || rm -rf "$OLDDIR"
     [ -z "$STAGE" ] || rm -rf "$STAGE"
     [ -z "$TMP" ] || rm -rf "$TMP"
 }
@@ -216,20 +215,25 @@ install_app() {
     quit_running_app
 
     say "Installing to $TARGET"
-    STAGE=$INSTALL_DIR/.$APP_NAME.app.new.$$
-    OLD=$INSTALL_DIR/.$APP_NAME.app.old.$$
-    ditto "$APP_SRC" "$STAGE"
+    # Fresh private directories (mode 700, unpredictable names) so a leftover or
+    # planted path can never redirect the copy or the move.
+    STAGE=$(mktemp -d "$INSTALL_DIR/.$APP_NAME.new.XXXXXX") || die "cannot create a staging folder in $INSTALL_DIR."
+    OLDDIR=$(mktemp -d "$INSTALL_DIR/.$APP_NAME.old.XXXXXX") || die "cannot create a backup folder in $INSTALL_DIR."
+    ditto "$APP_SRC" "$STAGE/$APP_NAME.app"
     if [ -e "$TARGET" ] || [ -L "$TARGET" ]; then
         note "Replacing the existing $APP_NAME.app"
-        mv "$TARGET" "$OLD"
+        mv "$TARGET" "$OLDDIR/$APP_NAME.app"
+        OLD=$OLDDIR/$APP_NAME.app
     fi
-    mv "$STAGE" "$TARGET" || die "could not move the new app into place; the previous install was kept."
-    STAGE=
-    rm -rf "$OLD"
+    mv "$STAGE/$APP_NAME.app" "$TARGET" || die "could not move the new app into place; the previous install was kept."
+    rm -rf "$OLDDIR" "$STAGE"
     OLD=
+    OLDDIR=
+    STAGE=
 
     say "Clearing any quarantine flag"
-    xattr -dr com.apple.quarantine "$TARGET" 2>/dev/null || true
+    xattr -dr com.apple.quarantine "$TARGET" 2>/dev/null \
+        || note "Could not clear the quarantine flag; if macOS warns on first launch, follow the steps in the README or run: xattr -dr com.apple.quarantine \"$TARGET\""
 
     shown=$(plutil -extract CFBundleShortVersionString raw -o - "$TARGET/Contents/Info.plist" 2>/dev/null || echo unknown)
     note "Installed $APP_NAME $shown"
@@ -288,7 +292,9 @@ main() {
     shift
 
     version=
+    version_set=0
     dir_opt=
+    dir_set=0
     from_source=0
     uninstall=0
     purge=0
@@ -298,15 +304,17 @@ main() {
             --version)
                 [ "$#" -ge 2 ] || die "--version needs a value."
                 version=$2
+                version_set=1
                 shift 2
                 ;;
-            --version=*) version=${1#--version=}; shift ;;
+            --version=*) version=${1#--version=}; version_set=1; shift ;;
             --dir)
                 [ "$#" -ge 2 ] || die "--dir needs a value."
                 dir_opt=$2
+                dir_set=1
                 shift 2
                 ;;
-            --dir=*) dir_opt=${1#--dir=}; shift ;;
+            --dir=*) dir_opt=${1#--dir=}; dir_set=1; shift ;;
             --from-source) from_source=1; shift ;;
             --uninstall) uninstall=1; shift ;;
             --purge) purge=1; shift ;;
@@ -315,8 +323,11 @@ main() {
             *) usage >&2; die "unknown option: $1" ;;
         esac
     done
-    if [ -n "$version" ]; then
-        printf '%s' "$version" | grep -Eq "$VERSION_RE" || die "--version must look like v1.2.3."
+    if [ "$version_set" -eq 1 ]; then
+        printf '%s' "$version" | grep -Eq "$VERSION_RE" || die "--version must look like v1.2.3 (got \"$version\")."
+    fi
+    if [ "$dir_set" -eq 1 ] && [ -z "$dir_opt" ]; then
+        die "--dir needs a non-empty folder; refusing to fall back to the default location."
     fi
     if [ "$purge" -eq 1 ] && [ "$uninstall" -eq 0 ]; then die "--purge only works together with --uninstall."; fi
     if [ "$uninstall" -eq 1 ] && { [ "$from_source" -eq 1 ] || [ -n "$version" ]; }; then

@@ -75,14 +75,14 @@ Requires macOS 14 (Sonoma) or newer on Apple Silicon or Intel.
 
 The app lives in the menu bar only and has no Dock icon.
 
-To skip the first-launch warning, use the
-[install script](#install-with-the-script-no-first-launch-warning) instead.
+To avoid the first-launch warning, use the
+[install script](#install-with-the-script-avoids-the-first-launch-warning) instead.
 
 The name (app bundle, DMG and release file names) is set in one place,
 `APP_NAME` in `scripts/release-config.sh`; the install steps above only spell it
 out in the `APP_NAME=` line of the Terminal alternative.
 
-### Install with the script (no first-launch warning)
+### Install with the script (avoids the first-launch warning)
 
 One line in Terminal downloads the latest release, checks it and installs it:
 
@@ -124,16 +124,19 @@ The script runs only on macOS 14 or newer and never uses `sudo`. It:
 4. Clears the quarantine flag as a safeguard and opens the app.
 
 It writes only to its temporary folder (deleted when it finishes) and the
-install folder, and sends no telemetry. The network is used for GitHub release
-downloads, plus `git clone` with `--from-source` (Swift Package Manager keeps its
-own caches under `~/Library/Caches` and `~/.swiftpm` while building). Your data in
+install folder, and sends no telemetry. The one exception is `--from-source`:
+Swift Package Manager keeps its own caches under `~/Library/Caches` and
+`~/.swiftpm` while building. The network is used for GitHub release downloads,
+plus `git clone` with `--from-source`. Your data in
 `~/Library/Application Support/Stillbreak` is never touched unless you pass
 `--uninstall --purge`.
 
 macOS shows the "could not verify" warning only for files that carry the
-quarantine flag, which browsers add to downloads and `curl` does not. The
-release is still only ad-hoc signed and not notarized; the script just avoids
-the warning. If you would rather not run a script, use the DMG above.
+quarantine flag, which browsers add to downloads and `curl` does not, and the
+script also removes the flag. If removing it fails, the script says so and the
+first launch may show the warning; use the steps for your macOS version above.
+The release is still only ad-hoc signed and not notarized; the script just
+avoids the warning in the normal case. If you would rather not run a script, use the DMG above.
 
 The checksum protects against a corrupted or incomplete download. It does not
 protect against a compromised GitHub account or release, because the checksum
