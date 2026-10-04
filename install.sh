@@ -1,11 +1,12 @@
 #!/bin/sh
 # Stillbreak installer for macOS.
 #
-#   curl -fsSL URL -o install.sh && grep -qx 'main "$@" --script-complete' install.sh && sh install.sh
+#   (f=$(mktemp) && trap 'rm -f "$f"' EXIT && curl -fsSL URL -o "$f" && grep -qx 'main "$@" --script-complete' "$f" && sh "$f")
 #
 # (URL is https://raw.githubusercontent.com/VladimirLi/Stillbreak/main/install.sh.)
-# The grep fails on an empty or cut-off download. Do not pipe into sh: a pipe
-# reports only sh's status, so a failed download looks like success.
+# The grep fails on an empty or cut-off download, and the temporary file means
+# an install.sh in the current folder is never overwritten. Do not pipe into
+# sh: a pipe reports only sh's status, so a failed download looks like success.
 #
 # Everything runs from main(), called on the last line, so a truncated download
 # defines functions at most and never executes half an install.
@@ -37,8 +38,9 @@ Usage: sh install.sh [options]
   --from-source     Clone the repository and build with Swift 6.3+ instead of
                     downloading a release. With --version, builds that tag.
   --dir DIR         Install into DIR instead of /Applications.
-  --no-open         Do not launch the app after installing (the app creates
-                    its data folder when it first runs).
+  --no-open         Do not launch the newly installed app. A running $APP_NAME
+                    is still quit to be replaced, and it may save its data
+                    folder while quitting.
   --uninstall       Remove $APP_NAME.app. Keeps your data unless --purge is given.
   --purge           With --uninstall, also delete
                     ~/Library/Application Support/$APP_NAME.

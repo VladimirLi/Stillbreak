@@ -84,28 +84,30 @@ out in the `APP_NAME=` line of the Terminal alternative.
 
 ### Install with the script (avoids the first-launch warning)
 
-One line in Terminal downloads the script, checks that the download is complete,
-and runs it:
+One line in Terminal downloads the script to a temporary file, checks that the
+download is complete, and runs it:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/VladimirLi/Stillbreak/main/install.sh -o install.sh && grep -qx 'main "$@" --script-complete' install.sh && sh install.sh
+(f=$(mktemp) && trap 'rm -f "$f"' EXIT && curl -fsSL https://raw.githubusercontent.com/VladimirLi/Stillbreak/main/install.sh -o "$f" && grep -qx 'main "$@" --script-complete' "$f" && sh "$f")
 ```
 
 The line stops with a non-zero exit status if the download fails, is empty or
-is cut short (the script's last line is its end marker). It leaves
-`install.sh` in the current folder; delete it afterwards. Prefer to read it
-before running? Download it, read it, then run it:
+is cut short (the script's last line is its end marker). The temporary file is
+deleted when the line ends, and nothing is written to your current folder, so
+an `install.sh` you already have there is never touched. Prefer to read the
+script before running it? Download it, read it, then run it:
 
 ```sh
-curl -fsSLO https://raw.githubusercontent.com/VladimirLi/Stillbreak/main/install.sh
-less install.sh
-sh install.sh
+f=$(mktemp) && curl -fsSL https://raw.githubusercontent.com/VladimirLi/Stillbreak/main/install.sh -o "$f"
+less "$f"
+sh "$f"
+rm -f "$f"
 ```
 
-Options go after `sh install.sh`:
+Options go at the end of the line, after `sh "$f"`:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/VladimirLi/Stillbreak/main/install.sh -o install.sh && grep -qx 'main "$@" --script-complete' install.sh && sh install.sh --version v1.0.0
+(f=$(mktemp) && trap 'rm -f "$f"' EXIT && curl -fsSL https://raw.githubusercontent.com/VladimirLi/Stillbreak/main/install.sh -o "$f" && grep -qx 'main "$@" --script-complete' "$f" && sh "$f" --version v1.0.0)
 ```
 
 Piping straight into the shell (`curl ... | sh`) also works, but a shell reading
@@ -118,7 +120,7 @@ detect failure.
 | `--version vX.Y.Z` | Install that release instead of the latest. |
 | `--from-source` | Clone the repository and build it on your Mac (needs Swift 6.3+; see [Build from source](#build-from-source)). Use it when no release is published yet. With `--version`, it builds that tag. |
 | `--dir DIR` | Install into `DIR` instead of `/Applications`. |
-| `--no-open` | Do not launch the app afterwards. |
+| `--no-open` | Do not launch the newly installed app afterwards. |
 | `--uninstall` | Remove the app and leave your data. Add `--purge` to delete `~/Library/Application Support/Stillbreak` too. |
 
 The script runs only on macOS 14 or newer and never uses `sudo`. It:
@@ -143,7 +145,10 @@ never deletes `~/Library/Application Support/Stillbreak` unless you pass
 Opening the app is a separate step, and the app itself writes there: on launch
 it saves its state file, and on a first launch it may copy data from
 `ActiveBreak` (see [Upgrading from ActiveBreak](#upgrading-from-activebreak)).
-Pass `--no-open` to install without launching, so nothing under
+`--no-open` only skips launching the newly installed app. If Stillbreak is
+already running, the script still quits it to replace it, and a running app
+can save its state at any time, so the state file may change even with
+`--no-open`. On a fresh install, with the app not running, nothing under
 `~/Library/Application Support` is created or changed until you open the app
 yourself.
 
