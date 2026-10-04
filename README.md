@@ -87,8 +87,9 @@ path is not Stillbreak, including an empty folder. It will not overwrite or nest
 inside another app, file or non-empty folder that appears there mid-install: it
 stops and leaves it alone. On an upgrade it puts the previous Stillbreak back only if
 the destination is free; otherwise it prints that copy's Trash path (on a fresh install,
-or if the collision is caught before the old app is moved, nothing was moved and no
-path is printed). A successful upgrade also prints the previous copy's Trash path. An empty folder is replaced whenever `rename(2)` meets one: at the
+or if a collision at the app destination is caught before the old app is moved, nothing was moved and no
+previous-copy path is printed). If the move to the Trash itself fails, the old app stays in `/Applications`;
+the error names the Trash path it tried, but nothing was placed there. A successful upgrade also prints the previous copy's Trash path. An empty folder is replaced whenever `rename(2)` meets one: at the
 destination only if it appears after the up-front checks (one already there is
 rejected), and at the generated Trash name even if it was there before; nothing is
 lost. These checks are
