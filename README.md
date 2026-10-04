@@ -84,13 +84,17 @@ out in the `APP_NAME=` line of the Terminal alternative.
 
 ### Install with the script (avoids the first-launch warning)
 
-One line in Terminal downloads the latest release, checks it and installs it:
+One line in Terminal downloads the script, checks that the download is complete,
+and runs it:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/VladimirLi/Stillbreak/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/VladimirLi/Stillbreak/main/install.sh -o install.sh && grep -qx 'main "$@" --script-complete' install.sh && sh install.sh
 ```
 
-Prefer to read it first? Download it, read it, then run it:
+The line stops with a non-zero exit status if the download fails, is empty or
+is cut short (the script's last line is its end marker). It leaves
+`install.sh` in the current folder; delete it afterwards. Prefer to read it
+before running? Download it, read it, then run it:
 
 ```sh
 curl -fsSLO https://raw.githubusercontent.com/VladimirLi/Stillbreak/main/install.sh
@@ -98,11 +102,16 @@ less install.sh
 sh install.sh
 ```
 
-Pass options after `sh -s --` when piping, or directly when running the file:
+Options go after `sh install.sh`:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/VladimirLi/Stillbreak/main/install.sh | sh -s -- --version v1.0.0
+curl -fsSL https://raw.githubusercontent.com/VladimirLi/Stillbreak/main/install.sh -o install.sh && grep -qx 'main "$@" --script-complete' install.sh && sh install.sh --version v1.0.0
 ```
+
+Piping straight into the shell (`curl ... | sh`) also works, but a shell reading
+a pipe reports only its own exit status, so a failed or empty download exits 0
+without installing anything. Use the lines above if a script or CI job needs to
+detect failure.
 
 | Option | Effect |
 | --- | --- |
@@ -123,13 +132,20 @@ The script runs only on macOS 14 or newer and never uses `sudo`. It:
    writable for you).
 4. Clears the quarantine flag as a safeguard and opens the app.
 
-It writes only to its temporary folder (deleted when it finishes) and the
-install folder, and sends no telemetry. The one exception is `--from-source`:
-Swift Package Manager keeps its own caches under `~/Library/Caches` and
-`~/.swiftpm` while building. The network is used for GitHub release downloads,
-plus `git clone` with `--from-source`. Your data in
-`~/Library/Application Support/Stillbreak` is never touched unless you pass
+The script itself writes only to its temporary folder (deleted when it
+finishes) and the install folder, and sends no telemetry. The one exception is
+`--from-source`: Swift Package Manager keeps its own caches under
+`~/Library/Caches` and `~/.swiftpm` while building. The network is used for
+GitHub release downloads, plus `git clone` with `--from-source`. The script
+never deletes `~/Library/Application Support/Stillbreak` unless you pass
 `--uninstall --purge`.
+
+Opening the app is a separate step, and the app itself writes there: on launch
+it saves its state file, and on a first launch it may copy data from
+`ActiveBreak` (see [Upgrading from ActiveBreak](#upgrading-from-activebreak)).
+Pass `--no-open` to install without launching, so nothing under
+`~/Library/Application Support` is created or changed until you open the app
+yourself.
 
 macOS shows the "could not verify" warning only for files that carry the
 quarantine flag, which browsers add to downloads and `curl` does not, and the
