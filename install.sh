@@ -52,14 +52,25 @@ EOF
 }
 
 cleanup() {
+    # A second signal must not cut the restore short.
+    trap '' INT HUP TERM
     keep_old=0
-    if [ -n "$OLD" ] && { [ -e "$OLD" ] || [ -L "$OLD" ]; }; then
-        if [ -n "$TARGET" ] && [ ! -e "$TARGET" ] && [ ! -L "$TARGET" ] \
-            && mv "$OLD" "$TARGET" 2>/dev/null; then
-            :
-        else
+    if [ -n "$OLD" ]; then
+        if [ -e "$OLD" ] || [ -L "$OLD" ]; then
+            # The previous app is in the backup folder: put it back unless
+            # something already occupies the target.
+            if [ -n "$TARGET" ] && [ ! -e "$TARGET" ] && [ ! -L "$TARGET" ] \
+                && mv "$OLD" "$TARGET" 2>/dev/null; then
+                :
+            else
+                keep_old=1
+                printf '%s\n' "ERROR: could not restore the previous $APP_NAME.app. It is still at: $OLD" >&2
+            fi
+        elif [ -z "$TARGET" ] || { [ ! -e "$TARGET" ] && [ ! -L "$TARGET" ]; }; then
+            # Neither the backup nor the target exists, so the backup move may
+            # have been cut short. Never delete the folder in that state.
             keep_old=1
-            printf '%s\n' "ERROR: could not restore the previous $APP_NAME.app. It is still at: $OLD" >&2
+            printf '%s\n' "ERROR: the previous $APP_NAME.app may be in: $OLDDIR" >&2
         fi
     fi
     [ "$keep_old" = 1 ] || [ -z "$OLDDIR" ] || rm -rf "$OLDDIR"
@@ -228,8 +239,8 @@ install_app() {
     ditto "$APP_SRC" "$STAGE/$APP_NAME.app"
     if [ -e "$TARGET" ] || [ -L "$TARGET" ]; then
         note "Replacing the existing $APP_NAME.app"
-        mv "$TARGET" "$OLDDIR/$APP_NAME.app"
         OLD=$OLDDIR/$APP_NAME.app
+        mv "$TARGET" "$OLD"
     fi
     mv "$STAGE/$APP_NAME.app" "$TARGET" || die "could not move the new app into place."
     rm -rf "$OLDDIR" "$STAGE"
