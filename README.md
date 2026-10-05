@@ -55,6 +55,13 @@ be disabled independently. The timer continues below zero until dead time,
 Pause, sleep (including while the app is closed), reboot, or a sufficiently
 long app shutdown closes the interval.
 
+Stillbreak asks macOS for notification permission when it launches, not at the
+first break. If notifications are not allowed, Settings and the menu show a
+button that opens System Settings > Notifications, and Stillbreak plays the
+alert sound (when Sound is on) instead of staying silent. Notification events
+are logged locally with `os.Logger` (subsystem `com.vladimirli.Stillbreak`,
+category `notification`); nothing leaves your Mac.
+
 Pause closes the current interval using validated work only. Resume waits for
 new activity. History is retained locally until **Delete All History** is
 confirmed. Each interval has one stable identifier, and applying the same

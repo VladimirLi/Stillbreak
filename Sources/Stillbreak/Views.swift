@@ -37,6 +37,17 @@ struct SettingsView: View {
                 }
             }
             Toggle("Notifications", isOn: setting(\.notificationsEnabled))
+            if let message = model.notificationStatus.message {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(message)
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let title = model.notificationStatus.actionTitle {
+                        Button(title) { model.performNotificationAction() }
+                    }
+                }
+            }
             Toggle("Sound", isOn: setting(\.soundEnabled))
             Toggle("Launch at login", isOn: setting(\.launchAtLogin))
             if let error = model.launchAtLoginError {
@@ -58,6 +69,7 @@ struct SettingsView: View {
         .formStyle(.grouped)
         .frame(width: 420)
         .padding()
+        .onAppear { model.refreshNotificationStatus() }
     }
 
     private func setting<Value>(_ keyPath: WritableKeyPath<BreakSettings, Value>) -> Binding<Value> {
