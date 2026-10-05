@@ -47,14 +47,16 @@ private let start = Date(timeIntervalSince1970: 1_700_000_000)
     #expect(denied.action == .openSystemSettings)
     #expect(denied.actionTitle == "Open Notification Settings")
     #expect(try #require(denied.message).contains("System Settings"))
-    #expect(try #require(denied.message).contains("alert sound"))
+    #expect(try #require(denied.message).contains("Sound"))
 
     let undecided = NotificationStatusPresentation.make(
         authorization: .notDetermined, notificationsEnabled: true, lastDeliveryFailed: false
     )
     #expect(undecided.action == .requestPermission)
     #expect(undecided.actionTitle == "Allow Notifications")
-    #expect(try #require(undecided.message).contains("45 seconds"))
+    let undecidedMessage = try #require(undecided.message)
+    #expect(undecidedMessage.contains("Don't Allow"))
+    #expect(!undecidedMessage.contains("seconds"))
 
     let unavailable = NotificationStatusPresentation.make(
         authorization: .unavailable, notificationsEnabled: true, lastDeliveryFailed: false

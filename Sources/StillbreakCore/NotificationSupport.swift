@@ -105,29 +105,29 @@ public struct NotificationStatusPresentation: Equatable, Sendable {
         switch authorization {
         case .denied:
             return NotificationStatusPresentation(
-                message: "Notifications are turned off for Stillbreak in System Settings, so no banner will appear. The alert sound (if Sound is on) and the menu bar countdown past zero still work.",
+                message: "Banners are blocked in System Settings. Sound (if on) and the menu bar countdown still work.",
                 action: .openSystemSettings
             )
         case .notDetermined:
             return NotificationStatusPresentation(
-                message: "Stillbreak has not been allowed to send notifications yet. Answer the macOS prompt while you are at the screen: it disappears after about 45 seconds and counts as Don't Allow.",
+                message: "Notifications aren't allowed yet. Answer the macOS prompt; if it's dismissed unanswered, that can count as Don't Allow.",
                 action: .requestPermission
             )
         case .unavailable:
             return NotificationStatusPresentation(
-                message: "Notifications are unavailable because Stillbreak is not running as an app bundle. The menu bar countdown still runs past zero.",
+                message: "Notifications need Stillbreak to run as an app bundle. The menu bar countdown still runs past zero.",
                 action: .none
             )
         case .authorized, .provisional, .ephemeral:
             if lastDeliveryFailed {
                 return NotificationStatusPresentation(
-                    message: "The last notification could not be delivered. Check Stillbreak in System Settings > Notifications.",
+                    message: "The last notification wasn't delivered. Check Stillbreak in System Settings > Notifications.",
                     action: .openSystemSettings
                 )
             }
             if alertsDisabled {
                 return NotificationStatusPresentation(
-                    message: "Stillbreak is allowed to send notifications, but banner alerts are off in System Settings, so no banner will pop up. You will hear a sound only if Sound is also on for Stillbreak under System Settings > Notifications. The menu bar countdown past zero still works.",
+                    message: "Banner alerts are off for Stillbreak in System Settings. Sound plays only if it's on there too; the menu bar countdown still works.",
                     action: .openSystemSettings
                 )
             }

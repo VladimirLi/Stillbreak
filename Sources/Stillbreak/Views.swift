@@ -41,12 +41,14 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Label {
                         Text(message)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .font(.subheadline)
+                            .foregroundStyle(.primary)
                             .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityLabel("Warning: \(message)")
                     } icon: {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundStyle(.orange)
+                            .accessibilityHidden(true)
                     }
                     if let title = model.notificationStatus.actionTitle {
                         Button(title) { model.performNotificationAction() }
