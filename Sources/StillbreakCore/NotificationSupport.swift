@@ -121,13 +121,13 @@ public struct NotificationStatusPresentation: Equatable, Sendable {
         case .authorized, .provisional, .ephemeral:
             if lastDeliveryFailed {
                 return NotificationStatusPresentation(
-                    message: "The last notification wasn't delivered. Check Stillbreak in System Settings > Notifications.",
+                    message: "The last notification could not be delivered. Check Stillbreak in System Settings > Notifications.",
                     action: .openSystemSettings
                 )
             }
             if alertsDisabled {
                 return NotificationStatusPresentation(
-                    message: "Banner alerts are off for Stillbreak in System Settings. Sound plays only if on there too; the menu bar countdown still works.",
+                    message: "Alerts are off in System Settings, so no banner appears. A sound plays only if Sound is also on there. Countdown still works.",
                     action: .openSystemSettings
                 )
             }
