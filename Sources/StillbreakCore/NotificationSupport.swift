@@ -127,7 +127,7 @@ public struct NotificationStatusPresentation: Equatable, Sendable {
             }
             if alertsDisabled {
                 return NotificationStatusPresentation(
-                    message: "Stillbreak is allowed to send notifications, but its alert style is set to None in System Settings, so no banner will pop up. The alert sound (if Sound is on) and the menu bar countdown past zero still work.",
+                    message: "Stillbreak is allowed to send notifications, but banner alerts are off in System Settings, so no banner will pop up. You will hear a sound only if Sound is also on for Stillbreak under System Settings > Notifications. The menu bar countdown past zero still works.",
                     action: .openSystemSettings
                 )
             }

@@ -64,9 +64,11 @@ button that opens System Settings > Notifications, and Stillbreak plays the
 alert sound (when Sound is on) instead of staying silent. If the notification
 cannot be added, the alert sound plays at once and Stillbreak retries the
 banner in the background (after 5 and 15 seconds), stopping if you pause or
-the work interval ends. If notifications are allowed but the alert style is
-None, macOS accepts the notification without showing a banner; Settings says so
-and offers the same button. Notification events are logged locally with `os.Logger` (subsystem `com.vladimirli.Stillbreak`,
+the work interval ends. If notifications are allowed but banner alerts are
+off (alert style None), macOS accepts the notification without showing a banner,
+and Stillbreak's own alert sound does not play; you hear a sound only if Sound is
+also on for Stillbreak in System Settings > Notifications. Settings says so and
+offers the same button. Notification events are logged locally with `os.Logger` (subsystem `com.vladimirli.Stillbreak`,
 category `notification`); nothing leaves your Mac.
 
 Pause closes the current interval using validated work only. Resume waits for

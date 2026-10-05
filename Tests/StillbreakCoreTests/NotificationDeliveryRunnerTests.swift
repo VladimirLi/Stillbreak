@@ -167,7 +167,10 @@ private final class Harness {
         lastDeliveryFailed: false, alertsDisabled: true
     )
     #expect(off.action == .openSystemSettings)
-    #expect(try #require(off.message).contains("no banner"))
+    let offMessage = try #require(off.message)
+    #expect(offMessage.contains("no banner"))
+    #expect(offMessage.contains("only if Sound is also on"))
+    #expect(!offMessage.contains("alert sound"))
 
     let failed = NotificationStatusPresentation.make(
         authorization: .authorized, notificationsEnabled: true,
@@ -186,4 +189,100 @@ private final class Harness {
         lastDeliveryFailed: false, alertsDisabled: true
     )
     #expect(disabledSetting.message == nil)
+}
+
+@MainActor
+private final class PromptHarness {
+    var performCalls = 0
+    var refreshCalls: [String] = []
+    var authorization: NotificationAuthorization = .notDetermined
+    var gate: CheckedContinuation<Void, Never>?
+    var result: (granted: Bool, failed: Bool) = (true, false)
+
+    lazy var requester = NotificationPermissionRequester(
+        refresh: { [self] context in refreshCalls.append(context); return authorization },
+        perform: { [self] in
+            performCalls += 1
+            await withCheckedContinuation { gate = $0 }
+            return result
+        }
+    )
+
+    func waitUntilSuspended() async {
+        while gate == nil { await Task.yield() }
+    }
+
+    func release() {
+        gate?.resume()
+        gate = nil
+    }
+}
+
+@MainActor
+@Test func overlappingPermissionRequestsShareOnePromptAndResult() async {
+    let h = PromptHarness()
+    h.result = (granted: false, failed: true)
+    let settingsOpen = Task { await h.requester.requestIfNeeded(context: "settings-open") }
+    await h.waitUntilSuspended()
+
+    let allow = Task { await h.requester.request() }
+    let threshold = Task { await h.requester.request() }
+    let settings = Task { await h.requester.requestIfNeeded(context: "settings") }
+    for _ in 0..<10 { await Task.yield() }
+    #expect(h.performCalls == 1)
+
+    h.release()
+    await settingsOpen.value
+    await settings.value
+    let allowResult = await allow.value
+    let thresholdResult = await threshold.value
+    #expect(allowResult == (granted: false, failed: true))
+    #expect(thresholdResult == (granted: false, failed: true))
+    #expect(h.performCalls == 1)
+    #expect(h.refreshCalls == ["settings-open"])
+}
+
+@MainActor
+@Test func permissionRequestIsNotSkippedAfterThePreviousOneFinishes() async {
+    let h = PromptHarness()
+    let first = Task { await h.requester.request() }
+    await h.waitUntilSuspended()
+    h.release()
+    _ = await first.value
+
+    let second = Task { await h.requester.request() }
+    await h.waitUntilSuspended()
+    h.release()
+    _ = await second.value
+    #expect(h.performCalls == 2)
+}
+
+@MainActor
+@Test func requestIfNeededSkipsPromptWhenAlreadyDecided() async {
+    let h = PromptHarness()
+    h.authorization = .denied
+    await h.requester.requestIfNeeded(context: "settings")
+    #expect(h.performCalls == 0)
+}
+
+@MainActor
+@Test func thresholdRunnerGetsTheSharedPromptResult() async {
+    let p = PromptHarness()
+    p.authorization = .notDetermined
+    p.result = (granted: true, failed: false)
+    let h = Harness(addResults: [true])
+    h.authorization = .notDetermined
+    var runner = h.runner
+    runner.requestAuthorization = { [requester = p.requester] in await requester.request() }
+
+    let settingsOpen = Task { await p.requester.requestIfNeeded(context: "settings-open") }
+    await p.waitUntilSuspended()
+    let run = Task { await runner.run(sound: true) }
+    for _ in 0..<10 { await Task.yield() }
+    h.authorization = .authorized
+    p.release()
+    await settingsOpen.value
+    let outcome = await run.value
+    #expect(outcome == .delivered)
+    #expect(p.performCalls == 1)
 }

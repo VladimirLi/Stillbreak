@@ -43,7 +43,20 @@ final class NotificationService: NSObject, UNUserNotificationCenterDelegate {
         return status
     }
 
+    private lazy var requester = NotificationPermissionRequester(
+        refresh: { [unowned self] in await refresh(context: $0) },
+        perform: { [unowned self] in await performAuthorizationRequest() }
+    )
+
     func requestAuthorization() async -> (granted: Bool, failed: Bool) {
+        await requester.request()
+    }
+
+    func requestAuthorizationIfNeeded(context: String) async {
+        await requester.requestIfNeeded(context: context)
+    }
+
+    private func performAuthorizationRequest() async -> (granted: Bool, failed: Bool) {
         guard let center else { return (false, true) }
         var granted = false
         var failure: String?
@@ -59,17 +72,6 @@ final class NotificationService: NSObject, UNUserNotificationCenterDelegate {
         log(NotificationDiagnosticBuilder.authorizationRequest(granted: granted, failure: failure))
         await refresh(context: "after-request")
         return (granted, failure != nil)
-    }
-
-    private var promptInFlight = false
-
-    func requestAuthorizationIfNeeded(context: String) async {
-        guard !promptInFlight else { return }
-        promptInFlight = true
-        defer { promptInFlight = false }
-        if await refresh(context: context) == .notDetermined {
-            _ = await requestAuthorization()
-        }
     }
 
     func deliver(sound: Bool, attempt: Int) async -> Bool {
