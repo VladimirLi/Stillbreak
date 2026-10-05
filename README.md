@@ -197,10 +197,8 @@ never deletes `~/Library/Application Support/Stillbreak` unless you pass
 `--uninstall --purge`.
 
 Opening the app is a separate step, and the app itself writes there: on launch
-it saves its state file, and on a first launch it may copy data from
-`ActiveBreak` (see [Upgrading from ActiveBreak](#upgrading-from-activebreak)).
-`--no-open` only skips launching the newly installed app. If Stillbreak is
-already running, the script still quits it to replace it, and a running app
+it saves its state file. `--no-open` only skips launching the newly installed
+app. If Stillbreak is already running, the script still quits it to replace it, and a running app
 can save its state at any time, so the state file may change even with
 `--no-open`. On a fresh install, with the app not running, nothing under
 `~/Library/Application Support` is created or changed until you open the app
@@ -217,38 +215,6 @@ The checksum protects against a corrupted or incomplete download. It does not
 protect against a compromised GitHub account or release, because the checksum
 file comes from the same place as the zip. Review the script and the release
 before running it if that matters to you.
-
-### Upgrading from ActiveBreak
-
-Stillbreak was called ActiveBreak before its first public release. The first
-time Stillbreak launches and finds no data of its own, it copies your history and
-settings from `~/Library/Application Support/ActiveBreak/state.json` to
-`~/Library/Application Support/Stillbreak/state.json`. The old file is left in
-place untouched, so it doubles as a backup.
-
-Quit ActiveBreak from its menu **before** opening Stillbreak for the first time.
-While ActiveBreak is running, Stillbreak refuses that first import (the copy
-would be stale immediately), shows a storage error, and saves nothing; quit
-ActiveBreak and relaunch Stillbreak to retry. The same happens if the copy
-itself fails.
-
-If ActiveBreak runs again later (for example from its old Login Items entry) and
-records more history, nothing is lost: every Stillbreak launch compares
-ActiveBreak's file with the copy it last imported (kept as
-`legacy-import-base.json` next to Stillbreak's `state.json`) and adds the new
-history records. If ActiveBreak saved more recently than Stillbreak, its
-settings and timer state win too. Changes made while both apps run at the same
-time are picked up on the next Stillbreak launch. If ActiveBreak's file cannot
-be read, Stillbreak shows a storage error and saves nothing rather than risk
-overwriting it.
-
-The bundle identifier changed (`com.vladimirli.Stillbreak`), so macOS treats it
-as a new app and asks for notification permission again. Your "Launch at login"
-choice is carried over, but Stillbreak will not register itself as a login item
-while `ActiveBreak.app` is still installed, so the two never start together;
-Settings says so. Delete `ActiveBreak.app` (its old Login Items entry goes with
-it), then relaunch Stillbreak once and it registers itself. Past diagnostics
-stay under the old `com.vladimirli.ActiveBreak` log subsystem.
 
 ### First launch on macOS 15 Sequoia and macOS 26 Tahoe
 
@@ -393,9 +359,7 @@ All settings, timer state, and history are stored as JSON in:
 ~/Library/Application Support/Stillbreak/state.json
 ```
 
-Data from the earlier ActiveBreak name is migrated once; see
-[Upgrading from ActiveBreak](#upgrading-from-activebreak). There is no network
-service, telemetry, account, cloud sync, or app-level tracking.
+There is no network service, telemetry, account, cloud sync, or app-level tracking.
 
 Stillbreak writes bounded local diagnostics to Apple's unified log under the
 `com.vladimirli.Stillbreak` subsystem, with `timer`, `lifecycle`,

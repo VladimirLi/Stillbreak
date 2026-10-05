@@ -63,17 +63,6 @@ final class AppModel: NSObject, ObservableObject {
         let loaded: PersistedData
         let loadError: String?
         do {
-            if environment[StateFileLocator.overrideVariable] == nil {
-                _ = try LegacyStateMigration.migrateIfNeeded(
-                    current: stateURL,
-                    legacy: LegacyStateMigration.legacyURL(applicationSupport: applicationSupport),
-                    legacyAppIsRunning: {
-                        !NSRunningApplication.runningApplications(
-                            withBundleIdentifier: LegacyStateMigration.legacyBundleIdentifier
-                        ).isEmpty
-                    }
-                )
-            }
             loaded = try store.load()
             loadError = nil
         } catch {
@@ -434,14 +423,10 @@ final class AppModel: NSObject, ObservableObject {
             return
         }
         let service = SMAppService.mainApp
-        let legacyAppInstalled = NSWorkspace.shared.urlForApplication(
-            withBundleIdentifier: LegacyStateMigration.legacyBundleIdentifier
-        ) != nil
         do {
             switch LaunchAtLoginPolicy.action(
                 enabled: enabled,
-                status: service.status.stillbreak,
-                legacyAppInstalled: legacyAppInstalled
+                status: service.status.stillbreak
             ) {
             case .register:
                 try service.register()
@@ -453,13 +438,11 @@ final class AppModel: NSObject, ObservableObject {
             let status = service.status.stillbreak
             launchAtLoginError = LaunchAtLoginPolicy.errorMessage(
                 enabled: enabled,
-                status: status,
-                legacyAppInstalled: legacyAppInstalled
+                status: status
             )
             let event = LoginItemDiagnosticBuilder.configure(
                 enabled: enabled,
-                status: status,
-                legacyAppInstalled: legacyAppInstalled
+                status: status
             )
             log(
                 event,

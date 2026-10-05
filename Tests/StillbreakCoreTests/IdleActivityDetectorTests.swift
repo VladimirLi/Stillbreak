@@ -222,23 +222,6 @@ import Testing
     #expect(LaunchAtLoginPolicy.action(enabled: false, status: .notRegistered) == .none)
     #expect(LaunchAtLoginPolicy.action(enabled: false, status: .enabled) == .unregister)
     #expect(LaunchAtLoginPolicy.action(enabled: false, status: .requiresApproval) == .unregister)
-    #expect(
-        LaunchAtLoginPolicy.action(enabled: true, status: .notRegistered, legacyAppInstalled: true) == .none
-    )
-    #expect(
-        LaunchAtLoginPolicy.action(enabled: false, status: .enabled, legacyAppInstalled: true) == .unregister
-    )
-    #expect(
-        LaunchAtLoginPolicy.errorMessage(enabled: true, status: .notRegistered, legacyAppInstalled: true)?
-            .contains("ActiveBreak is still installed") == true
-    )
-    #expect(
-        LaunchAtLoginPolicy.errorMessage(enabled: false, status: .notRegistered, legacyAppInstalled: true) == nil
-    )
-    #expect(
-        LoginItemDiagnosticBuilder.configure(enabled: true, status: .notRegistered, legacyAppInstalled: true)
-            .outcome == "deferred"
-    )
     #expect(LaunchAtLoginPolicy.action(enabled: false, status: .notFound) == .none)
     #expect(LaunchAtLoginPolicy.errorMessage(enabled: true, status: .requiresApproval)
         == "Open System Settings to approve Stillbreak as a login item.")
