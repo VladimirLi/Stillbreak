@@ -30,6 +30,7 @@ final class AppModel: NSObject, ObservableObject {
     @Published private(set) var persistenceError: String?
     @Published private(set) var notificationAuthorization: NotificationAuthorization = .notDetermined
     @Published private(set) var notificationDeliveryFailed = false
+    @Published private(set) var notificationAlertsDisabled = false
     let status: StatusBarModel
 
     private let store: HistoryStore
@@ -269,7 +270,8 @@ final class AppModel: NSObject, ObservableObject {
         NotificationStatusPresentation.make(
             authorization: notificationAuthorization,
             notificationsEnabled: data.settings.notificationsEnabled,
-            lastDeliveryFailed: notificationDeliveryFailed
+            lastDeliveryFailed: notificationDeliveryFailed,
+            alertsDisabled: notificationAlertsDisabled
         )
     }
 
@@ -381,48 +383,32 @@ final class AppModel: NSObject, ObservableObject {
     private func syncNotificationState() {
         notificationAuthorization = notifications.authorization
         notificationDeliveryFailed = notifications.lastDeliveryFailed
+        notificationAlertsDisabled = notifications.alertsDisabled
     }
 
     private func deliverNotification(sound: Bool) {
-        Task { [weak self] in await self?.runNotificationDelivery(sound: sound) }
-    }
-
-    private func runNotificationDelivery(sound: Bool) async {
-        var step = NotificationDeliveryPolicy.step(for: await notifications.refresh(context: "threshold"))
-        var attempt = 0
-        var cued = false
-        while true {
-            switch step {
-            case .deliver:
-                attempt += 1
-                if await notifications.deliver(sound: sound, attempt: attempt) { return }
-                switch NotificationDeliveryPolicy.decisionAfterDeliveryFailure(attempt: attempt) {
-                case let .retry(after):
-                    try? await Task.sleep(for: .seconds(after))
-                    step = NotificationDeliveryPolicy.step(
-                        for: await notifications.refresh(context: "retry")
-                    )
-                case let .fallback(reason):
-                    fallbackCue(reason, sound: sound, alreadyCued: cued)
-                    return
-                }
-            case .requestAuthorization:
-                fallbackCue(.awaitingPermission, sound: sound, alreadyCued: cued)
-                cued = true
-                let result = await notifications.requestAuthorization()
-                step = NotificationDeliveryPolicy.stepAfterAuthorizationRequest(
-                    granted: result.granted,
-                    failed: result.failed
+        guard let intervalID = reducer.state.interval?.id else { return }
+        let runner = NotificationDeliveryRunner(
+            refresh: { [notifications] in await notifications.refresh(context: $0) },
+            requestAuthorization: { [notifications] in await notifications.requestAuthorization() },
+            deliver: { [notifications] in await notifications.deliver(sound: $0, attempt: $1) },
+            sleep: { try? await Task.sleep(for: .seconds($0)) },
+            isCurrent: { [weak self] in
+                guard let self else { return false }
+                return reducer.state.mode == .active && reducer.state.interval?.id == intervalID
+            },
+            cue: { [weak self] in self?.fallbackCue($0, playSound: $1) },
+            cancelled: { [weak self] stage in
+                self?.log(
+                    NotificationDiagnosticBuilder.cancelled(stage: stage),
+                    with: Logs.notification
                 )
-            case let .fallback(reason):
-                fallbackCue(reason, sound: sound, alreadyCued: cued)
-                return
             }
-        }
+        )
+        Task { await runner.run(sound: sound) }
     }
 
-    private func fallbackCue(_ reason: NotificationFallbackReason, sound: Bool, alreadyCued: Bool) {
-        let playSound = sound && !alreadyCued
+    private func fallbackCue(_ reason: NotificationFallbackReason, playSound: Bool) {
         if playSound { NSSound.beep() }
         log(
             NotificationDiagnosticBuilder.fallback(reason: reason, soundPlayed: playSound),

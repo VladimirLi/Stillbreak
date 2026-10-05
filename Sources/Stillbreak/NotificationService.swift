@@ -9,6 +9,7 @@ final class NotificationService: NSObject, UNUserNotificationCenterDelegate {
     private let log: (DiagnosticEvent) -> Void
     private(set) var authorization: NotificationAuthorization = .notDetermined
     private(set) var lastDeliveryFailed = false
+    private(set) var alertsDisabled = false
     var onChange: (() -> Void)?
 
     init(log: @escaping (DiagnosticEvent) -> Void) {
@@ -23,13 +24,22 @@ final class NotificationService: NSObject, UNUserNotificationCenterDelegate {
     @discardableResult
     func refresh(context: String) async -> NotificationAuthorization {
         let status: NotificationAuthorization
+        var alertsOff = false
         if let center {
-            status = await center.notificationSettings().authorizationStatus.stillbreak
+            let settings = await center.notificationSettings()
+            status = settings.authorizationStatus.stillbreak
+            alertsOff = settings.alertStyle == .none || settings.alertSetting == .disabled
         } else {
             status = .unavailable
         }
-        setAuthorization(status)
-        log(NotificationDiagnosticBuilder.authorizationStatus(status, context: context))
+        let changed = alertsDisabled != alertsOff
+        alertsDisabled = alertsOff
+        setAuthorization(status, forceChange: changed)
+        log(NotificationDiagnosticBuilder.authorizationStatus(
+            status,
+            context: context,
+            alertsDisabled: alertsOff
+        ))
         return status
     }
 
@@ -93,8 +103,8 @@ final class NotificationService: NSObject, UNUserNotificationCenterDelegate {
         }
     }
 
-    private func setAuthorization(_ value: NotificationAuthorization) {
-        guard authorization != value else { return }
+    private func setAuthorization(_ value: NotificationAuthorization, forceChange: Bool) {
+        guard authorization != value || forceChange else { return }
         authorization = value
         onChange?()
     }

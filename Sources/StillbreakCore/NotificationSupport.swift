@@ -96,7 +96,8 @@ public struct NotificationStatusPresentation: Equatable, Sendable {
     public static func make(
         authorization: NotificationAuthorization,
         notificationsEnabled: Bool,
-        lastDeliveryFailed: Bool
+        lastDeliveryFailed: Bool,
+        alertsDisabled: Bool = false
     ) -> NotificationStatusPresentation {
         guard notificationsEnabled else {
             return NotificationStatusPresentation(message: nil, action: .none)
@@ -118,13 +119,19 @@ public struct NotificationStatusPresentation: Equatable, Sendable {
                 action: .none
             )
         case .authorized, .provisional, .ephemeral:
-            guard lastDeliveryFailed else {
-                return NotificationStatusPresentation(message: nil, action: .none)
+            if lastDeliveryFailed {
+                return NotificationStatusPresentation(
+                    message: "The last notification could not be delivered. Check Stillbreak in System Settings > Notifications.",
+                    action: .openSystemSettings
+                )
             }
-            return NotificationStatusPresentation(
-                message: "The last notification could not be delivered. Check Stillbreak in System Settings > Notifications.",
-                action: .openSystemSettings
-            )
+            if alertsDisabled {
+                return NotificationStatusPresentation(
+                    message: "Stillbreak is allowed to send notifications, but its alert style is set to None in System Settings, so no banner will pop up. The menu bar countdown still runs past zero.",
+                    action: .openSystemSettings
+                )
+            }
+            return NotificationStatusPresentation(message: nil, action: .none)
         }
     }
 }
@@ -148,14 +155,24 @@ public enum NotificationDiagnosticBuilder {
         )
     }
 
+    public static func cancelled(stage: String) -> DiagnosticEvent {
+        DiagnosticEvent(
+            category: .notification,
+            event: "delivery-cancelled",
+            reason: stage,
+            outcome: "cancelled"
+        )
+    }
+
     public static func authorizationStatus(
         _ authorization: NotificationAuthorization,
-        context: String
+        context: String,
+        alertsDisabled: Bool = false
     ) -> DiagnosticEvent {
         DiagnosticEvent(
             category: .notification,
             event: "authorization-status",
-            reason: context,
+            reason: alertsDisabled ? "\(context) alerts=disabled" : context,
             outcome: authorization.rawValue
         )
     }

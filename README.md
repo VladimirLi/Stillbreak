@@ -58,8 +58,12 @@ long app shutdown closes the interval.
 Stillbreak asks macOS for notification permission when it launches, not at the
 first break. If notifications are not allowed, Settings and the menu show a
 button that opens System Settings > Notifications, and Stillbreak plays the
-alert sound (when Sound is on) instead of staying silent. Notification events
-are logged locally with `os.Logger` (subsystem `com.vladimirli.Stillbreak`,
+alert sound (when Sound is on) instead of staying silent. If the notification
+cannot be added, the alert sound plays at once and Stillbreak retries the
+banner in the background (after 5 and 15 seconds), stopping if you pause or
+the work interval ends. If notifications are allowed but the alert style is
+None, macOS accepts the notification without showing a banner; Settings says so
+and offers the same button. Notification events are logged locally with `os.Logger` (subsystem `com.vladimirli.Stillbreak`,
 category `notification`); nothing leaves your Mac.
 
 Pause closes the current interval using validated work only. Resume waits for
