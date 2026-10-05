@@ -5,6 +5,7 @@ public enum DiagnosticCategory: String, Codable, Sendable {
     case lifecycle
     case persistence
     case loginItem
+    case notification
 }
 
 public enum DiagnosticLevel: String, Equatable, Sendable {

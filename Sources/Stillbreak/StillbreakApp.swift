@@ -67,6 +67,14 @@ private struct MenuContent: View {
             Label("Settings", systemImage: "gear")
         }
 
+        if let title = model.notificationStatus.actionTitle {
+            Button {
+                model.performNotificationAction()
+            } label: {
+                Label(title, systemImage: "bell.slash")
+            }
+        }
+
         Button {
             openWindow(id: "dashboard")
             NSApplication.shared.activate(ignoringOtherApps: true)

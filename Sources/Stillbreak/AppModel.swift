@@ -28,6 +28,9 @@ final class AppModel: NSObject, ObservableObject {
     @Published private(set) var data: PersistedData
     @Published private(set) var launchAtLoginError: String?
     @Published private(set) var persistenceError: String?
+    @Published private(set) var notificationAuthorization: NotificationAuthorization = .notDetermined
+    @Published private(set) var notificationDeliveryFailed = false
+    @Published private(set) var notificationAlertsDisabled = false
     let status: StatusBarModel
 
     private let store: HistoryStore
@@ -37,6 +40,13 @@ final class AppModel: NSObject, ObservableObject {
     private var persistenceBlocked: Bool
     private var persistenceController: PersistenceController
     private var now: Date
+    private var loggedThresholdIntervalID: UUID?
+    private let notifications = NotificationService { event in
+        Logs.notification.log(
+            level: NotificationDiagnosticBuilder.level(for: event).osLogType,
+            "\(event.message, privacy: .public)"
+        )
+    }
 
     override init() {
         let launchNow = Date()
@@ -86,6 +96,9 @@ final class AppModel: NSObject, ObservableObject {
         )
         super.init()
 
+        loggedThresholdIntervalID = loaded.timer.interval?.notificationSent == true
+            ? loaded.timer.interval?.id
+            : nil
         log(
             DiagnosticEvent(
                 category: .persistence,
@@ -134,6 +147,18 @@ final class AppModel: NSObject, ObservableObject {
             repeats: true
         )
         RunLoop.main.add(timer!, forMode: .common)
+        notifications.onChange = { [weak self] in self?.syncNotificationState() }
+        syncNotificationState()
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appDidBecomeActive),
+            name: NSApplication.didBecomeActiveNotification,
+            object: nil
+        )
+        Task { [weak self] in
+            guard let self else { return }
+            await notifications.refresh(context: "launch")
+        }
         NSWorkspace.shared.notificationCenter.addObserver(
             self,
             selector: #selector(didWake),
@@ -165,6 +190,10 @@ final class AppModel: NSObject, ObservableObject {
         let changed = processHIDActivity(context: "poll")
         updateStatus()
         save(changed: changed)
+    }
+
+    @objc private func appDidBecomeActive() {
+        refreshNotificationStatus()
     }
 
     @objc private func willSleep() {
@@ -233,9 +262,45 @@ final class AppModel: NSObject, ObservableObject {
         )
     }
 
+    var notificationStatus: NotificationStatusPresentation {
+        NotificationStatusPresentation.make(
+            authorization: notificationAuthorization,
+            notificationsEnabled: data.settings.notificationsEnabled,
+            lastDeliveryFailed: notificationDeliveryFailed,
+            alertsDisabled: notificationAlertsDisabled
+        )
+    }
+
+    func refreshNotificationStatus() {
+        Task { await notifications.refresh(context: "refresh") }
+    }
+
+    func settingsDidAppear() {
+        if data.settings.notificationsEnabled {
+            Task { await notifications.requestAuthorizationIfNeeded(context: "settings-open") }
+        } else {
+            refreshNotificationStatus()
+        }
+    }
+
+    func performNotificationAction() {
+        switch notificationStatus.action {
+        case .none:
+            break
+        case .requestPermission:
+            Task { _ = await notifications.requestAuthorization() }
+        case .openSystemSettings:
+            notifications.openSystemSettings()
+        }
+    }
+
     func updateSettings(_ settings: BreakSettings) {
         let loginChanged = settings.launchAtLogin != data.settings.launchAtLogin
+        let notificationsTurnedOn = settings.notificationsEnabled && !data.settings.notificationsEnabled
         data.settings = settings
+        if notificationsTurnedOn {
+            Task { await notifications.requestAuthorizationIfNeeded(context: "settings") }
+        }
         if loginChanged {
             configureLaunchAtLogin(enabled: settings.launchAtLogin)
         }
@@ -286,7 +351,7 @@ final class AppModel: NSObject, ObservableObject {
         for effect in result.forwardedEffects {
             switch effect {
             case let .notify(sound):
-                sendNotification(sound: sound)
+                deliverNotification(sound: sound)
             case .playSound:
                 NSSound.beep()
             case .log:
@@ -296,19 +361,64 @@ final class AppModel: NSObject, ObservableObject {
         if result.data != data {
             data = result.data
         }
+        logThresholdIfReached(effects: effects)
         return result.historyChanged || result.stateChanged
     }
 
-    private func sendNotification(sound: Bool) {
-        let center = UNUserNotificationCenter.current()
-        center.requestAuthorization(options: [.alert, .sound]) { granted, _ in
-            guard granted else { return }
-            let content = UNMutableNotificationContent()
-            content.title = "Time for a break"
-            content.body = "You reached your Stillbreak work threshold."
-            content.sound = sound ? .default : nil
-            center.add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
-        }
+    private func logThresholdIfReached(effects: [TimerEffect]) {
+        guard reducer.state.mode == .active,
+              let interval = reducer.state.interval,
+              interval.notificationSent,
+              loggedThresholdIntervalID != interval.id
+        else { return }
+        loggedThresholdIntervalID = interval.id
+        log(
+            NotificationDiagnosticBuilder.thresholdReached(
+                threshold: interval.settings.workThreshold,
+                provisional: interval.provisionalActive(at: now),
+                notificationsEnabled: interval.settings.notificationsEnabled,
+                soundEnabled: interval.settings.soundEnabled,
+                effects: effects
+            ),
+            with: Logs.notification
+        )
+    }
+
+    private func syncNotificationState() {
+        notificationAuthorization = notifications.authorization
+        notificationDeliveryFailed = notifications.lastDeliveryFailed
+        notificationAlertsDisabled = notifications.alertsDisabled
+    }
+
+    private func deliverNotification(sound: Bool) {
+        guard let intervalID = reducer.state.interval?.id else { return }
+        let runner = NotificationDeliveryRunner(
+            refresh: { [notifications] in await notifications.refresh(context: $0) },
+            requestAuthorization: { [notifications] in await notifications.requestAuthorization() },
+            deliver: { [notifications] in await notifications.deliver(sound: $0, attempt: $1) },
+            sleep: { try? await Task.sleep(for: .seconds($0)) },
+            isCurrent: { [weak self] in
+                guard let self else { return false }
+                return reducer.state.mode == .active && reducer.state.interval?.id == intervalID
+            },
+            cue: { [weak self] in self?.fallbackCue($0, playSound: $1) },
+            cancelled: { [weak self] stage in
+                self?.log(
+                    NotificationDiagnosticBuilder.cancelled(stage: stage),
+                    with: Logs.notification
+                )
+            }
+        )
+        Task { await runner.run(sound: sound) }
+    }
+
+    private func fallbackCue(_ reason: NotificationFallbackReason, playSound: Bool) {
+        if playSound { NSSound.beep() }
+        log(
+            NotificationDiagnosticBuilder.fallback(reason: reason, soundPlayed: playSound),
+            with: Logs.notification,
+            level: .error
+        )
     }
 
     private func configureLaunchAtLogin(enabled: Bool) {
@@ -448,7 +558,7 @@ final class AppModel: NSObject, ObservableObject {
     }
 }
 
-private extension DiagnosticLevel {
+extension DiagnosticLevel {
     var osLogType: OSLogType {
         switch self {
         case .debug:
@@ -467,6 +577,7 @@ private enum Logs {
     static let lifecycle = Logger(subsystem: subsystem, category: "lifecycle")
     static let persistence = Logger(subsystem: subsystem, category: "persistence")
     static let loginItem = Logger(subsystem: subsystem, category: "login-item")
+    static let notification = Logger(subsystem: subsystem, category: "notification")
 }
 
 private extension TimerEffect {
