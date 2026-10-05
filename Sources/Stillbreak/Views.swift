@@ -74,6 +74,7 @@ struct SettingsView: View {
                 .foregroundStyle(.secondary)
         }
         .formStyle(.grouped)
+        .fixedSize(horizontal: false, vertical: true)
         .frame(width: 420)
         .padding()
         .onAppear { model.settingsDidAppear() }

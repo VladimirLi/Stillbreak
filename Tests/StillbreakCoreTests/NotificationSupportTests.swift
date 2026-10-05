@@ -72,6 +72,19 @@ private let start = Date(timeIntervalSince1970: 1_700_000_000)
     #expect(failed.message != nil)
 }
 
+@Test func statusPresentationMessagesStayWithinLengthTarget() throws {
+    let states: [NotificationStatusPresentation] = [
+        .make(authorization: .denied, notificationsEnabled: true, lastDeliveryFailed: false),
+        .make(authorization: .notDetermined, notificationsEnabled: true, lastDeliveryFailed: false),
+        .make(authorization: .unavailable, notificationsEnabled: true, lastDeliveryFailed: false),
+        .make(authorization: .authorized, notificationsEnabled: true, lastDeliveryFailed: true),
+        .make(authorization: .authorized, notificationsEnabled: true, lastDeliveryFailed: false, alertsDisabled: true),
+    ]
+    for state in states {
+        #expect(try #require(state.message).count <= 130)
+    }
+}
+
 @Test func statusPresentationIsSilentWhenHealthyOrDisabled() {
     let healthy = NotificationStatusPresentation.make(
         authorization: .authorized, notificationsEnabled: true, lastDeliveryFailed: false

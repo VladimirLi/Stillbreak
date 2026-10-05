@@ -127,7 +127,7 @@ public struct NotificationStatusPresentation: Equatable, Sendable {
             }
             if alertsDisabled {
                 return NotificationStatusPresentation(
-                    message: "Banner alerts are off for Stillbreak in System Settings. Sound plays only if it's on there too; the menu bar countdown still works.",
+                    message: "Banner alerts are off for Stillbreak in System Settings. Sound plays only if on there too; the menu bar countdown still works.",
                     action: .openSystemSettings
                 )
             }
