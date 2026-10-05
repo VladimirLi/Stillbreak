@@ -46,8 +46,10 @@ private let start = Date(timeIntervalSince1970: 1_700_000_000)
     )
     #expect(denied.action == .openSystemSettings)
     #expect(denied.actionTitle == "Open Notification Settings")
-    #expect(try #require(denied.message).contains("System Settings"))
-    #expect(try #require(denied.message).contains("Sound"))
+    let deniedMessage = try #require(denied.message)
+    #expect(deniedMessage.contains("Banners are blocked in System Settings."))
+    #expect(deniedMessage.contains("Stillbreak's own Sound setting"))
+    #expect(!deniedMessage.contains("System Settings. Sound"))
 
     let undecided = NotificationStatusPresentation.make(
         authorization: .notDetermined, notificationsEnabled: true, lastDeliveryFailed: false

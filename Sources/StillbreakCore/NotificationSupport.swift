@@ -105,7 +105,7 @@ public struct NotificationStatusPresentation: Equatable, Sendable {
         switch authorization {
         case .denied:
             return NotificationStatusPresentation(
-                message: "Banners are blocked in System Settings. Sound (if on) and the menu bar countdown still work.",
+                message: "Banners are blocked in System Settings. Stillbreak's own Sound setting (if on) still beeps, and the menu bar countdown works.",
                 action: .openSystemSettings
             )
         case .notDetermined:
