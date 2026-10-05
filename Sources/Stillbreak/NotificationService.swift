@@ -61,7 +61,12 @@ final class NotificationService: NSObject, UNUserNotificationCenterDelegate {
         return (granted, failure != nil)
     }
 
+    private var promptInFlight = false
+
     func requestAuthorizationIfNeeded(context: String) async {
+        guard !promptInFlight else { return }
+        promptInFlight = true
+        defer { promptInFlight = false }
         if await refresh(context: context) == .notDetermined {
             _ = await requestAuthorization()
         }

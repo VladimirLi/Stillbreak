@@ -105,12 +105,12 @@ public struct NotificationStatusPresentation: Equatable, Sendable {
         switch authorization {
         case .denied:
             return NotificationStatusPresentation(
-                message: "Notifications are turned off for Stillbreak in System Settings, so no banner will appear. The menu bar countdown still runs past zero.",
+                message: "Notifications are turned off for Stillbreak in System Settings, so no banner will appear. The alert sound (if Sound is on) and the menu bar countdown past zero still work.",
                 action: .openSystemSettings
             )
         case .notDetermined:
             return NotificationStatusPresentation(
-                message: "Stillbreak has not been allowed to send notifications yet.",
+                message: "Stillbreak has not been allowed to send notifications yet. Answer the macOS prompt while you are at the screen: it disappears after about 45 seconds and counts as Don't Allow.",
                 action: .requestPermission
             )
         case .unavailable:
@@ -127,7 +127,7 @@ public struct NotificationStatusPresentation: Equatable, Sendable {
             }
             if alertsDisabled {
                 return NotificationStatusPresentation(
-                    message: "Stillbreak is allowed to send notifications, but its alert style is set to None in System Settings, so no banner will pop up. The menu bar countdown still runs past zero.",
+                    message: "Stillbreak is allowed to send notifications, but its alert style is set to None in System Settings, so no banner will pop up. The alert sound (if Sound is on) and the menu bar countdown past zero still work.",
                     action: .openSystemSettings
                 )
             }

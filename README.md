@@ -55,8 +55,11 @@ be disabled independently. The timer continues below zero until dead time,
 Pause, sleep (including while the app is closed), reboot, or a sufficiently
 long app shutdown closes the interval.
 
-Stillbreak asks macOS for notification permission when it launches, not at the
-first break. If notifications are not allowed, Settings and the menu show a
+Stillbreak asks macOS for notification permission when you first open Settings
+or press Allow Notifications in the menu, or at the first break if you have not
+done either. It does not ask at launch: an unanswered macOS prompt expires after
+about 45 seconds and counts as Don't Allow, which would happen unseen when the
+app starts at login. If notifications are not allowed, Settings and the menu show a
 button that opens System Settings > Notifications, and Stillbreak plays the
 alert sound (when Sound is on) instead of staying silent. If the notification
 cannot be added, the alert sound plays at once and Stillbreak retries the

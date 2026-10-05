@@ -157,11 +157,7 @@ final class AppModel: NSObject, ObservableObject {
         )
         Task { [weak self] in
             guard let self else { return }
-            if data.settings.notificationsEnabled {
-                await notifications.requestAuthorizationIfNeeded(context: "launch")
-            } else {
-                await notifications.refresh(context: "launch")
-            }
+            await notifications.refresh(context: "launch")
         }
         NSWorkspace.shared.notificationCenter.addObserver(
             self,
@@ -277,6 +273,14 @@ final class AppModel: NSObject, ObservableObject {
 
     func refreshNotificationStatus() {
         Task { await notifications.refresh(context: "refresh") }
+    }
+
+    func settingsDidAppear() {
+        if data.settings.notificationsEnabled {
+            Task { await notifications.requestAuthorizationIfNeeded(context: "settings-open") }
+        } else {
+            refreshNotificationStatus()
+        }
     }
 
     func performNotificationAction() {

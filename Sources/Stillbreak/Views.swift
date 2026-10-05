@@ -39,10 +39,15 @@ struct SettingsView: View {
             Toggle("Notifications", isOn: setting(\.notificationsEnabled))
             if let message = model.notificationStatus.message {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(message)
-                        .font(.caption)
-                        .foregroundStyle(.orange)
-                        .fixedSize(horizontal: false, vertical: true)
+                    Label {
+                        Text(message)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } icon: {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                    }
                     if let title = model.notificationStatus.actionTitle {
                         Button(title) { model.performNotificationAction() }
                     }
@@ -69,7 +74,7 @@ struct SettingsView: View {
         .formStyle(.grouped)
         .frame(width: 420)
         .padding()
-        .onAppear { model.refreshNotificationStatus() }
+        .onAppear { model.settingsDidAppear() }
     }
 
     private func setting<Value>(_ keyPath: WritableKeyPath<BreakSettings, Value>) -> Binding<Value> {
