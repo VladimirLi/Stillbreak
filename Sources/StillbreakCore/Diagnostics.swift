@@ -170,19 +170,11 @@ public enum LifecycleDiagnosticReason {
 public enum LoginItemDiagnosticBuilder {
     public static func configure(
         enabled: Bool,
-        status: LaunchAtLoginStatus,
-        legacyAppInstalled: Bool = false
+        status: LaunchAtLoginStatus
     ) -> DiagnosticEvent {
         let reason: String?
         let outcome: String
         switch (enabled, status) {
-        case (true, .notRegistered) where legacyAppInstalled:
-            return DiagnosticEvent(
-                category: .loginItem,
-                event: "configure",
-                reason: "legacy-app-installed",
-                outcome: "deferred"
-            )
         case (true, .enabled), (false, .notRegistered):
             reason = nil
             outcome = "success"

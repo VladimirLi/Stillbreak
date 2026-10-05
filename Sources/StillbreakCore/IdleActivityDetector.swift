@@ -94,12 +94,11 @@ public enum LaunchAtLoginAction: Equatable, Sendable {
 public enum LaunchAtLoginPolicy {
     public static func action(
         enabled: Bool,
-        status: LaunchAtLoginStatus,
-        legacyAppInstalled: Bool = false
+        status: LaunchAtLoginStatus
     ) -> LaunchAtLoginAction {
         switch (enabled, status) {
         case (true, .notRegistered):
-            return legacyAppInstalled ? .none : .register
+            return .register
         case (false, .enabled), (false, .requiresApproval):
             return .unregister
         default:
@@ -109,12 +108,8 @@ public enum LaunchAtLoginPolicy {
 
     public static func errorMessage(
         enabled: Bool,
-        status: LaunchAtLoginStatus,
-        legacyAppInstalled: Bool = false
+        status: LaunchAtLoginStatus
     ) -> String? {
-        if enabled, legacyAppInstalled, status == .notRegistered {
-            return "ActiveBreak is still installed. Delete it to let Stillbreak launch at login, so both do not start together."
-        }
         switch status {
         case .notFound:
             return "Stillbreak could not be found by macOS Login Items."

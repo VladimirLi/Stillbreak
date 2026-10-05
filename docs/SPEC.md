@@ -148,16 +148,6 @@ records MUST be clipped to that range and split at current-local-midnight
 boundaries; exported timestamps and durations MUST NOT extend outside the
 selected range.
 
-## Legacy data migration
-
-On launch, when no `STILLBREAK_STATE_FILE` override is set, `state.json` does not
-exist in `Application Support/Stillbreak`, and `Application Support/ActiveBreak/state.json`
-exists, Stillbreak MUST copy the legacy file to the new location before loading
-it. The copy MUST be atomic, MUST NOT use the network, and MUST leave the legacy
-file unmodified. A migration failure MUST be surfaced as a persistence error and
-MUST NOT start from an empty state that is then saved. An existing new state file
-MUST never be overwritten.
-
 ## Diagnostics
 
 Stillbreak MUST use Apple's unified log with subsystem
