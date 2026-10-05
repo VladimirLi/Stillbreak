@@ -54,7 +54,9 @@ private let start = Date(timeIntervalSince1970: 1_700_000_000)
     )
     #expect(undecided.action == .requestPermission)
     #expect(undecided.actionTitle == "Allow Notifications")
-    #expect(try #require(undecided.message).contains("45 seconds"))
+    let undecidedMessage = try #require(undecided.message)
+    #expect(undecidedMessage.contains("Don't Allow"))
+    #expect(!undecidedMessage.contains("seconds"))
 
     let unavailable = NotificationStatusPresentation.make(
         authorization: .unavailable, notificationsEnabled: true, lastDeliveryFailed: false

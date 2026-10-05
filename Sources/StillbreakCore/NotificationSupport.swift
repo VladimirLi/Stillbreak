@@ -110,7 +110,7 @@ public struct NotificationStatusPresentation: Equatable, Sendable {
             )
         case .notDetermined:
             return NotificationStatusPresentation(
-                message: "Stillbreak has not been allowed to send notifications yet. Answer the macOS prompt while you are at the screen: it disappears after about 45 seconds and counts as Don't Allow.",
+                message: "Stillbreak has not been allowed to send notifications yet. Answer the macOS prompt while you are at the screen: if you leave it unanswered, macOS may dismiss it, and a dismissed prompt can count as Don't Allow.",
                 action: .requestPermission
             )
         case .unavailable:
