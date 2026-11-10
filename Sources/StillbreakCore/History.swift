@@ -180,15 +180,18 @@ enum StillbreakDateCoding {
 }
 
 private extension ISO8601DateFormatter {
-    static var withFractionalSeconds: ISO8601DateFormatter {
+    // Shared instances: building a formatter per date made every state save
+    // cost most of a CPU second. Apple documents ISO8601DateFormatter as
+    // thread-safe, and these are never mutated after creation.
+    nonisolated(unsafe) static let withFractionalSeconds: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return formatter
-    }
+    }()
 
-    static var withoutFractionalSeconds: ISO8601DateFormatter {
+    nonisolated(unsafe) static let withoutFractionalSeconds: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]
         return formatter
-    }
+    }()
 }
