@@ -351,7 +351,7 @@ final class AppModel: NSObject, ObservableObject {
             data = result.data
         }
         logThresholdIfReached(effects: effects)
-        return result.historyChanged || result.stateChanged
+        return result.historyChanged || result.materialStateChanged
     }
 
     private func logThresholdIfReached(effects: [TimerEffect]) {

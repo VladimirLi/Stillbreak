@@ -123,3 +123,44 @@ import Testing
     #expect(retried == .persisted)
     #expect(writes == 2)
 }
+
+@Test func advancingTheSameIntervalIsNotAMaterialStateChange() {
+    let start = Date(timeIntervalSince1970: 1_700_000_000)
+    let settings = BreakSettings(workThreshold: 60, deadTime: 300)
+    var reducer = TimerReducer()
+    reducer.activity(at: start, settings: settings)
+    let started = TimerEffectProcessor.apply([], state: reducer.state, to: PersistedData())
+    #expect(started.materialStateChanged)
+
+    reducer.activity(at: start.addingTimeInterval(1), settings: settings)
+    let advanced = TimerEffectProcessor.apply([], state: reducer.state, to: started.data)
+    #expect(advanced.stateChanged)
+    #expect(!advanced.materialStateChanged)
+    #expect(advanced.data.timer == reducer.state)
+
+    let thresholdEffects = reducer.activity(at: start.addingTimeInterval(61), settings: settings)
+    let threshold = TimerEffectProcessor.apply(thresholdEffects, state: reducer.state, to: advanced.data)
+    #expect(threshold.materialStateChanged)
+
+    reducer.pause(at: start.addingTimeInterval(62))
+    let paused = TimerEffectProcessor.apply([], state: reducer.state, to: threshold.data)
+    #expect(paused.materialStateChanged)
+}
+
+@Test func encodingALargeHistoryStaysCheap() throws {
+    let start = Date(timeIntervalSince1970: 1_700_000_000)
+    let settings = BreakSettings(workThreshold: 60, deadTime: 300)
+    var data = PersistedData()
+    for index in 0..<2_000 {
+        var reducer = TimerReducer()
+        let begin = start.addingTimeInterval(Double(index) * 1_000)
+        reducer.activity(at: begin, settings: settings)
+        reducer.activity(at: begin.addingTimeInterval(100), settings: settings)
+        let effects = reducer.sample(at: begin.addingTimeInterval(500))
+        data = TimerEffectProcessor.apply(effects, state: reducer.state, to: data).data
+    }
+    #expect(data.history.count == 2_000)
+    let clock = ContinuousClock()
+    let elapsed = try clock.measure { _ = try JSONEncoder.stillbreak.encode(data) }
+    #expect(elapsed < .seconds(1))
+}

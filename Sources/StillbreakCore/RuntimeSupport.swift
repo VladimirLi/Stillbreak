@@ -5,6 +5,9 @@ public struct TimerEffectApplicationResult: Sendable {
     public var forwardedEffects: [TimerEffect]
     public var historyChanged: Bool
     public var stateChanged: Bool
+    /// True when the timer state changed in a way that must be persisted at
+    /// once, as opposed to a sample that only advanced the running interval.
+    public var materialStateChanged: Bool
 }
 
 public enum TimerEffectProcessor {
@@ -26,13 +29,26 @@ public enum TimerEffectProcessor {
             }
         }
         let stateChanged = updated.timer != state
+        let materialStateChanged = updated.timer.differsMaterially(from: state)
         updated.timer = state
         return TimerEffectApplicationResult(
             data: updated,
             forwardedEffects: forwarded,
             historyChanged: historyChanged,
-            stateChanged: stateChanged
+            stateChanged: stateChanged,
+            materialStateChanged: materialStateChanged
         )
+    }
+}
+
+extension TimerState {
+    /// Advancing `lastActivityAt` and the work segments of the same interval is
+    /// not material: the 60-second checkpoint and lifecycle flushes cover it.
+    func differsMaterially(from other: TimerState) -> Bool {
+        mode != other.mode
+            || interval?.id != other.interval?.id
+            || interval?.notificationSent != other.interval?.notificationSent
+            || interval?.settings != other.interval?.settings
     }
 }
 
